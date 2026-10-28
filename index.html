@@ -50,11 +50,7 @@ body{
   border-bottom:1px solid var(--line);
   -webkit-user-select:none;user-select:none;
 }
-.traffic{display:flex;gap:8px;flex:0 0 auto}
-.traffic i{width:12px;height:12px;border-radius:50%;display:block}
-.traffic i:nth-child(1){background:#ff5f57;border:1px solid #e0443e}
-.traffic i:nth-child(2){background:#febc2e;border:1px solid #d99e06}
-.traffic i:nth-child(3){background:#28c840;border:1px solid #1f9d31}
+.traffic{display:none}
 .window-title{flex:1;text-align:center;font-size:13px;font-weight:600;color:var(--ink-2);letter-spacing:0.2px}
 .window-title b{color:var(--ink)}
 .window-spacer{flex:0 0 auto;width:52px}
@@ -192,15 +188,6 @@ input[type=number].input{-moz-appearance:textfield}
 }
 .chip-add:hover{background:rgba(10,132,255,0.06)}
 
-/* Segmented control (My Library / Search Online) */
-.seg{display:flex;background:rgba(0,0,0,0.06);border-radius:9px;padding:3px;gap:3px}
-.seg button{flex:1;padding:8px;border:none;background:transparent;border-radius:7px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:background .15s,color .15s}
-.seg button.active{background:var(--panel-solid);color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,0.12)}
-.seg button:hover:not(.active){background:rgba(0,0,0,0.03)}
-.online-thumb{width:38px;height:38px;border-radius:8px;object-fit:cover;flex:0 0 auto;background:rgba(0,0,0,0.05)}
-.online-nodata{width:38px;height:38px;border-radius:8px;background:rgba(0,0,0,0.06);flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-weight:700;font-size:13px}
-.search-status{font-size:12.5px;color:var(--ink-3);font-weight:500;padding:8px 4px}
-
 .searchbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
 .searchbar .input{flex:1;min-width:220px}
 
@@ -265,7 +252,6 @@ footer b{color:var(--ink-2)}
 <body>
 <!-- ===== Window chrome ===== -->
 <header class="window-bar">
-  <div class="traffic"><i></i><i></i><i></i></div>
   <div class="window-title"><b>FitMate</b> · Weight &amp; Food Tracker</div>
   <div class="window-spacer"></div>
 </header>
@@ -311,8 +297,9 @@ const MEALS = [
   {id:'snack', label:'Snacks'}
 ];
 
-/* ----- Default food library (pre-loaded with Kevin's usual foods) ----- */
+/* ----- Default food library (curated with accurate macros by Kevin's assistant) ----- */
 const DEFAULT_FOODS = [
+  /* ==== Kevin's usual meals ==== */
   {id:'f-maggi', name:'Maggi 2-Minute Noodles (1 pkt)', cal:349, p:8, c:53, f:14, cats:['Fast Food','Instant'], per:'per packet'},
   {id:'f-fishballs', name:'Fish Balls (per ball)', cal:15, p:1.3, c:0.6, f:0.7, cats:['Seafood','Snack'], per:'each'},
   {id:'f-fishball8', name:'Maggi Bowl: 8 Fish Balls + 2 Eggs + Frozen Veg', cal:550, p:22, c:60, f:26, cats:['Fast Food','Kevin Meals'], per:'full bowl'},
@@ -321,30 +308,104 @@ const DEFAULT_FOODS = [
   {id:'f-frozenveg', name:'Frozen Mixed Vegetables (1 cup)', cal:75, p:3.5, c:15, f:0.3, cats:['Veg','Kevin Meals'], per:'per cup'},
   {id:'f-sardine', name:'Sardine Sandwich', cal:350, p:18, c:34, f:16, cats:['Sandwich','Kevin Meals'], per:'per sandwich'},
   {id:'f-tuna', name:'Tuna Sandwich', cal:380, p:22, c:33, f:16, cats:['Sandwich','Kevin Meals'], per:'per sandwich'},
-  {id:'f-tuna-bread', name:'Bread (2 slices)', cal:160, p:6, c:30, f:2, cats:['Carbs','Staple'], per:'2 slices'},
+
+  /* ==== Fast food ==== */
   {id:'f-kfc-pc', name:'KFC Fried Chicken (1 pc)', cal:260, p:19, c:10, f:16, cats:['Fast Food','KFC'], per:'1 pc'},
   {id:'f-kfc-zinger', name:'KFC Zinger Burger', cal:460, p:22, c:42, f:23, cats:['Fast Food','KFC'], per:'each'},
   {id:'f-kfc-fries', name:'KFC Fries (regular)', cal:330, p:4, c:42, f:16, cats:['Fast Food','KFC'], per:'regular'},
   {id:'f-kfc-hotwings', name:'KFC Hot Wings (2 pcs)', cal:300, p:18, c:12, f:20, cats:['Fast Food','KFC'], per:'2 pcs'},
+  {id:'f-kfc-colonel', name:'KFC Colonel Burger', cal:440, p:21, c:40, f:23, cats:['Fast Food','KFC'], per:'each'},
   {id:'f-mcd-burger', name:'McDonald\'s Big Mac', cal:560, p:26, c:45, f:30, cats:['Fast Food','Burger'], per:'each'},
   {id:'f-mcd-fries', name:'McDonald\'s Fries (medium)', cal:340, p:4, c:44, f:17, cats:['Fast Food','Burger'], per:'medium'},
+  {id:'f-mcd-filet', name:'McDonald\'s Filet-O-Fish', cal:330, p:15, c:38, f:14, cats:['Fast Food','Burger'], per:'each'},
+  {id:'f-burger-double', name:'Burger (double cheeseburger)', cal:450, p:25, c:34, f:24, cats:['Fast Food','Burger'], per:'each'},
+  {id:'f-pizza-slice', name:'Pizza (1 slice, cheese)', cal:285, p:12, c:36, f:10, cats:['Fast Food','Pizza'], per:'per slice'},
+
+  /* ==== Malaysian / local favourites ==== */
   {id:'f-currynoodle', name:'Curry Noodles (咖喱面)', cal:520, p:20, c:60, f:24, cats:['Local','Noodle'], per:'per bowl'},
   {id:'f-hainanese', name:'Hainanese Chicken Rice', cal:600, p:32, c:62, f:25, cats:['Local','Rice'], per:'per plate'},
   {id:'f-rojak', name:'Rojak (1 serving)', cal:280, p:5, c:45, f:9, cats:['Local','Snack'], per:'per serving'},
   {id:'f-nasilemak', name:'Nasi Lemak (with egg & anchovies)', cal:640, p:14, c:60, f:40, cats:['Local','Rice'], per:'per plate'},
   {id:'f-charcoal', name:'Char Kway Teow (1 plate)', cal:630, p:18, c:75, f:28, cats:['Local','Noodle'], per:'per plate'},
-  {id:'f-donut', name:'Donut (glazed)', cal:260, p:4, c:32, f:13, cats:['Sweet','Snack'], per:'each'},
-  {id:'f-donut2', name:'Donut (chocolate iced)', cal:290, p:4, c:36, f:15, cats:['Sweet','Snack'], per:'each'},
+  {id:'f-nasigoreng', name:'Nasi Goreng (1 plate)', cal:650, p:18, c:80, f:28, cats:['Local','Rice'], per:'per plate'},
+  {id:'f-mie-goreng', name:'Mee Goreng (1 plate)', cal:520, p:16, c:72, f:18, cats:['Local','Noodle'], per:'per plate'},
+  {id:'f-laksa', name:'Laksa (1 bowl)', cal:580, p:25, c:55, f:30, cats:['Local','Noodle'], per:'per bowl'},
+  {id:'f-satay10', name:'Satay (10 sticks)', cal:540, p:45, c:20, f:32, cats:['Local','Protein'], per:'10 sticks'},
+  {id:'f-rotikanai', name:'Roti Canai (1 piece)', cal:300, p:6, c:35, f:15, cats:['Local','Carbs'], per:'each'},
+  {id:'f-bihun', name:'Bihun Goreng (1 plate)', cal:450, p:12, c:80, f:9, cats:['Local','Noodle'], per:'per plate'},
+  {id:'f-popiah', name:'Popiah (1 roll)', cal:150, p:4, c:24, f:4, cats:['Local','Snack'], per:'each'},
+  {id:'f-cendol', name:'Cendol (1 bowl)', cal:300, p:3, c:55, f:9, cats:['Local','Sweet'], per:'per bowl'},
+  {id:'f-katong-laksa', name:'Katong Laksa (1 bowl)', cal:560, p:24, c:52, f:30, cats:['Local','Noodle'], per:'per bowl'},
+
+  /* ==== Proteins ==== */
+  {id:'f-chicken', name:'Chicken Breast (grilled)', cal:165, p:31, c:0, f:3.6, cats:['Protein'], per:'100g'},
+  {id:'f-chicken-thigh', name:'Chicken Thigh (roasted)', cal:220, p:26, c:0, f:13, cats:['Protein'], per:'100g'},
+  {id:'f-tuna-can', name:'Canned Tuna in Water (1 can)', cal:120, p:26, c:0, f:1, cats:['Protein','Canned'], per:'per can'},
+  {id:'f-sardine-can', name:'Canned Sardine in Tomato (1 can)', cal:190, p:22, c:4, f:9, cats:['Protein','Canned'], per:'per can'},
+  {id:'f-beef', name:'Beef (lean, cooked)', cal:250, p:26, c:0, f:15, cats:['Protein'], per:'100g'},
+  {id:'f-pork', name:'Pork Chop (grilled)', cal:242, p:26, c:0, f:14, cats:['Protein'], per:'100g'},
+  {id:'f-salmon', name:'Salmon (grilled)', cal:208, p:20, c:0, f:13, cats:['Protein','Seafood'], per:'100g'},
+  {id:'f-prawn', name:'Prawns (cooked)', cal:99, p:24, c:0.2, f:0.3, cats:['Protein','Seafood'], per:'100g'},
+  {id:'f-tofu', name:'Tofu (firm)', cal:145, p:15, c:3, f:9, cats:['Protein','Veg'], per:'100g'},
+  {id:'f-tempeh', name:'Tempeh', cal:193, p:19, c:9, f:11, cats:['Protein','Veg'], per:'100g'},
+  {id:'f-fish-white', name:'White Fish (tilapia, cooked)', cal:128, p:26, c:0, f:2.7, cats:['Protein','Seafood'], per:'100g'},
+
+  /* ==== Carbs / staples ==== */
+  {id:'f-rice', name:'White Rice (1 bowl)', cal:200, p:4, c:45, f:0.4, cats:['Carbs','Staple'], per:'per bowl'},
+  {id:'f-brownrice', name:'Brown Rice (1 bowl)', cal:215, p:5, c:45, f:1.6, cats:['Carbs','Staple'], per:'per bowl'},
+  {id:'f-pasta', name:'Pasta with sauce (1 plate)', cal:450, p:13, c:78, f:10, cats:['Carbs','Pasta'], per:'per plate'},
+  {id:'f-bread1', name:'White Bread (1 slice)', cal:80, p:3, c:15, f:1, cats:['Carbs','Staple'], per:'per slice'},
+  {id:'f-bread-whole', name:'Whole Wheat Bread (1 slice)', cal:70, p:4, c:12, f:1, cats:['Carbs','Staple'], per:'per slice'},
+  {id:'f-tuna-bread', name:'Bread (2 slices)', cal:160, p:6, c:30, f:2, cats:['Carbs','Staple'], per:'2 slices'},
+  {id:'f-potato', name:'Potato (baked, medium)', cal:161, p:4, c:37, f:0.2, cats:['Carbs'], per:'each'},
+  {id:'f-sweetpotato', name:'Sweet Potato (medium)', cal:112, p:2, c:26, f:0.1, cats:['Carbs'], per:'each'},
+  {id:'f-noodles-egg', name:'Egg Noodles (1 bowl)', cal:220, p:7, c:40, f:3, cats:['Carbs','Noodle'], per:'per bowl'},
+  {id:'f-cornflakes', name:'Cornflakes (1 bowl with milk)', cal:220, p:6, c:42, f:3, cats:['Carbs','Breakfast'], per:'per bowl'},
+  {id:'f-oatmeal', name:'Oatmeal (1 bowl)', cal:150, p:5, c:27, f:3, cats:['Carbs','Breakfast'], per:'per bowl'},
+
+  /* ==== Fruits ==== */
+  {id:'f-banana', name:'Banana (medium)', cal:105, p:1.3, c:27, f:0.4, cats:['Fruit'], per:'each'},
+  {id:'f-apple', name:'Apple (medium)', cal:95, p:0.5, c:25, f:0.3, cats:['Fruit'], per:'each'},
+  {id:'f-orange', name:'Orange (medium)', cal:62, p:1.2, c:15, f:0.2, cats:['Fruit'], per:'each'},
+  {id:'f-mango', name:'Mango (1 cup)', cal:100, p:0.8, c:25, f:0.6, cats:['Fruit'], per:'per cup'},
+  {id:'f-watermelon', name:'Watermelon (1 cup)', cal:46, p:0.9, c:11.5, f:0.2, cats:['Fruit'], per:'per cup'},
+  {id:'f-papaya', name:'Papaya (1 cup)', cal:55, p:0.9, c:14, f:0.2, cats:['Fruit'], per:'per cup'},
+  {id:'f-durian', name:'Durian (2 seeds)', cal:180, p:3, c:24, f:8, cats:['Fruit','Local'], per:'2 seeds'},
+  {id:'f-grapes', name:'Grapes (1 cup)', cal:104, p:1, c:27, f:0.2, cats:['Fruit'], per:'per cup'},
+
+  /* ==== Vegetables ==== */
+  {id:'f-broccoli', name:'Broccoli (1 cup cooked)', cal:55, p:3.7, c:11, f:0.6, cats:['Veg'], per:'per cup'},
+  {id:'f-kangkung', name:'Kangkung (1 cup cooked)', cal:19, p:2, c:3, f:0.3, cats:['Veg','Local'], per:'per cup'},
+  {id:'f-bokchoy', name:'Bok Choy (1 cup)', cal:20, p:2, c:3, f:0.3, cats:['Veg','Local'], per:'per cup'},
+  {id:'f-cabbage', name:'Cabbage (1 cup)', cal:22, p:1.1, c:5, f:0.1, cats:['Veg'], per:'per cup'},
+  {id:'f-carrot', name:'Carrot (1 medium)', cal:25, p:0.6, c:6, f:0.1, cats:['Veg'], per:'each'},
+  {id:'f-tomato', name:'Tomato (1 medium)', cal:22, p:1.1, c:4.8, f:0.2, cats:['Veg'], per:'each'},
+  {id:'f-cucumber', name:'Cucumber (1/2)', cal:8, p:0.3, c:2, f:0.1, cats:['Veg'], per:'1/2'},
+  {id:'f-taugeh', name:'Bean Sprouts (1 cup)', cal:31, p:3, c:6, f:0.2, cats:['Veg','Local'], per:'per cup'},
+
+  /* ==== Drinks ==== */
   {id:'f-cuppa', name:'Kopi / Coffee (with condensed milk)', cal:90, p:1, c:12, f:4, cats:['Drink'], per:'per cup'},
   {id:'f-milo', name:'Milo (1 cup)', cal:160, p:5, c:28, f:3, cats:['Drink'], per:'per cup'},
   {id:'f-teh', name:'Teh Tarik', cal:130, p:2, c:17, f:6, cats:['Drink'], per:'per cup'},
+  {id:'f-cola', name:'Coca-Cola (1 can)', cal:139, p:0, c:39, f:0, cats:['Drink'], per:'per can'},
+  {id:'f-cola-diet', name:'Diet Cola (1 can)', cal:1, p:0, c:0.2, f:0, cats:['Drink'], per:'per can'},
+  {id:'f-orange-juice', name:'Orange Juice (1 glass)', cal:112, p:1.7, c:26, f:0.5, cats:['Drink'], per:'per glass'},
+  {id:'f-100plus', name:'100 Plus (1 can)', cal:77, p:0, c:20, f:0, cats:['Drink','Local'], per:'per can'},
+  {id:'f-milk', name:'Milk (1 glass, full cream)', cal:150, p:8, c:12, f:8, cats:['Drink'], per:'per glass'},
+  {id:'f-milklowfat', name:'Milk (1 glass, low fat)', cal:102, p:8, c:12, f:2.5, cats:['Drink'], per:'per glass'},
+  {id:'f-teh-o', name:'Teh O (no milk)', cal:60, p:0, c:15, f:0, cats:['Drink'], per:'per cup'},
+  {id:'f-beer', name:'Beer (1 can)', cal:154, p:1.6, c:13, f:0, cats:['Drink'], per:'per can'},
+  {id:'f-beer-tiger', name:'Tiger Beer (1 can)', cal:130, p:1, c:9, f:0, cats:['Drink','Local'], per:'per can'},
+
+  /* ==== Snacks & sweets ==== */
+  {id:'f-donut', name:'Donut (glazed)', cal:260, p:4, c:32, f:13, cats:['Sweet','Snack'], per:'each'},
+  {id:'f-donut2', name:'Donut (chocolate iced)', cal:290, p:4, c:36, f:15, cats:['Sweet','Snack'], per:'each'},
   {id:'f-icecream', name:'Ice Cream (1 scoop)', cal:140, p:2, c:16, f:7, cats:['Sweet'], per:'1 scoop'},
-  {id:'f-rice', name:'White Rice (1 bowl)', cal:200, p:4, c:45, f:0.4, cats:['Carbs','Staple'], per:'per bowl'},
-  {id:'f-pasta', name:'Pasta with sauce (1 plate)', cal:450, p:13, c:78, f:10, cats:['Carbs','Pasta'], per:'per plate'},
-  {id:'f-bread1', name:'White Bread (1 slice)', cal:80, p:3, c:15, f:1, cats:['Carbs','Staple'], per:'per slice'},
-  {id:'f-chicken', name:'Chicken Breast (grilled)', cal:165, p:31, c:0, f:3.6, cats:['Protein'], per:'100g'},
-  {id:'f-tuna-can', name:'Canned Tuna in Water (1 can)', cal:120, p:26, c:0, f:1, cats:['Protein','Canned'], per:'per can'},
-  {id:'f-sardine-can', name:'Canned Sardine in Tomato (1 can)', cal:190, p:22, c:4, f:9, cats:['Protein','Canned'], per:'per can'}
+  {id:'f-chocolate', name:'Milk Chocolate (1 bar)', cal:235, p:3, c:26, f:13, cats:['Sweet','Snack'], per:'per bar'},
+  {id:'f-chips', name:'Potato Chips (1 small bag)', cal:160, p:2, c:15, f:10, cats:['Snack'], per:'per bag'},
+  {id:'f-keropok', name:'Keropok Lekor (5 pcs)', cal:180, p:6, c:18, f:9, cats:['Snack','Local'], per:'5 pcs'},
+  {id:'f-kuih', name:'Kuih (1 piece)', cal:150, p:2, c:25, f:5, cats:['Snack','Local','Sweet'], per:'each'},
+  {id:'f-nuts', name:'Peanuts / Groundnuts (1 handful)', cal:170, p:7, c:6, f:14, cats:['Snack'], per:'1 handful'}
 ];
 
 let state = {
@@ -621,11 +682,7 @@ function jumpToday(){ currentDate=todayStr(); render(); }
 function addFoodToMeal(meal){
   openModal(`
     <h3>Add food to ${MEALS.find(m=>m.id===meal).label}</h3>
-    <div class="seg" style="margin-bottom:12px">
-      <button class="seg-btn active" data-mode="local" onclick="setPickMode('local','${meal}')">My Library</button>
-      <button class="seg-btn" data-mode="online" onclick="setPickMode('online','${meal}')">Search Online</button>
-    </div>
-    <div class="field" style="margin-bottom:10px"><label>Search</label>
+    <div class="field" style="margin-bottom:10px"><label>Search your library</label>
       <input class="input" id="foodPick" placeholder="e.g. KFC, curry noodles, donut…" autofocus></div>
     <div style="max-height:250px;overflow-y:auto;margin-top:4px" id="pickList"></div>
     <div class="modal-actions">
@@ -634,134 +691,15 @@ function addFoodToMeal(meal){
     </div>`);
   const inp=document.getElementById('foodPick');
   renderPickList(inp.value, meal);
-  inp.addEventListener('input',()=>{
-    const mode=document.querySelector('.seg-btn.active')?.dataset.mode;
-    if(mode==='online'){ clearTimeout(window.__pickDebounce); window.__pickDebounce=setTimeout(()=>searchOnline(inp.value, meal),400); }
-    else renderPickList(inp.value, meal);
-  });
-}
-let pickMode='local';
-let onlineCache={};   // query -> items, avoids repeated API hits (rate-limit friendly)
-function fetchSearch(q){
-  // cache-first
-  if(onlineCache[q]) return Promise.resolve(onlineCache[q]);
-  const url='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(q)+'&search_simple=1&action=process&json=1&page_size=12&fields=code,product_name,brands,image_url,image_front_url,nutriments';
-  const attempt=()=>fetch(url).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-    .then(data=>{
-      const items=(data&&data.products||[]).filter(p=>p.nutriments).map(onlineRow).slice(0,12);
-      onlineCache[q]=items;
-      return items;
-    });
-  // automatic retries with backoff (handles transient rate-limiting)
-  return attempt()
-    .catch(()=> new Promise(res=>setTimeout(res,2200)).then(attempt))
-    .catch(()=> new Promise(res=>setTimeout(res,4500)).then(attempt));
+  inp.addEventListener('input',()=>renderPickList(inp.value, meal));
 }
 function allFoods(){
   const custom=state.customFoods||[];
   return DEFAULT_FOODS.concat(custom);
 }
-function setPickMode(m, meal){
-  pickMode=m;
-  document.querySelectorAll('.seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.mode===m));
-  const inp=document.getElementById('foodPick');
-  const list=document.getElementById('pickList');
-  const saveBtn=document.getElementById('pickSaveBtn');
-  inp.value='';
-  if(m==='online'){
-    inp.placeholder='e.g. coca cola, milo, nasi lemak, chicken…';
-    saveBtn.style.display='none';
-    list.innerHTML=`<div class="search-status">Type to search the global Open Food Facts database (foods &amp; drinks).</div>`;
-  } else {
-    inp.placeholder='e.g. KFC, curry noodles, donut…';
-    saveBtn.style.display='';
-    renderPickList('', meal);
-  }
-}
-function onlineRow(f){
-  const kcal = f.nutriments ? (f.nutriments['energy-kcal_100g']!=null?f.nutriments['energy-kcal_100g']:(f.nutriments['energy-kcal']!=null?f.nutriments['energy-kcal']:(f.nutriments['energy_100g']!=null?Math.round(f.nutriments['energy_100g']/4.184):null))):null;
-  const P = f.nutriments? (f.nutriments['proteins_100g']||0):0;
-  const C = f.nutriments? (f.nutriments['carbohydrates_100g']||0):0;
-  const F = f.nutriments? (f.nutriments['fat_100g']||0):0;
-  const img = f.image_url || f.image_front_url || '';
-  const brand = f.brands || '';
-  const name = f.product_name || 'Unnamed food';
-  return {
-    id:f.code, name:name, brand:brand, img:img, per100kcal:kcal, p:P, c:C, f:F, qty:'per 100g'
-  };
-}
-function searchOnline(q, meal){
-  const list=document.getElementById('pickList');
-  if(!list) return;
-  const s=q.trim();
-  if(!s){ list.innerHTML=`<div class="search-status">Type to search the global Open Food Facts database (foods &amp; drinks).</div>`; return; }
-  list.innerHTML=`<div class="search-status">Searching “${esc(s)}”…</div>`;
-  fetchSearch(s).then(items=>{
-    if(!items.length){ list.innerHTML=`<div class="search-status">No nutrition data found for “${esc(s)}”. Try another spelling.</div>`; return; }
-    list.innerHTML=items.map((f,i)=>`
-      <div class="food-row" style="cursor:pointer" onclick="pickOnline('${meal}','${f.id}')">
-        ${f.img?`<img class="online-thumb" src="${esc(f.img)}" alt="" onerror="this.style.display='none'">`:`<div class="online-nodata">?</div>`}
-        <div style="flex:1;min-width:0">
-          <div class="f-name">${esc(f.name)}${f.brand?`<span style="font-weight:500;color:var(--ink-3)"> · ${esc(f.brand)}</span>`:''}</div>
-          <div class="f-qty">${f.per100kcal!=null?f.per100kcal+' kcal':'n/a'} per 100g · P${Math.round(f.p)} C${Math.round(f.c)} F${Math.round(f.f)}</div>
-        </div>
-        <div class="f-cals">＋</div>
-      </div>`).join('');
-  }).catch(()=>{ list.innerHTML=`<div class="search-status">Couldn’t reach the database. <button class="chip-add" onclick="searchOnline('${meal}',document.getElementById('foodPick').value)">Retry</button></div>`; });
-}
-function pickOnline(meal, code){
-  // fetch full product to get proper serving (per product) info
-  fetch('https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json').then(r=>r.json()).then(data=>{
-    const p=data.product;
-    if(!p||!p.nutriments){ toast('No nutrition data for this item'); return; }
-    const kcal = p.nutriments['energy-kcal_100g']!=null?p.nutriments['energy-kcal_100g']:(p.nutriments['energy_100g']!=null?Math.round(p.nutriments['energy_100g']/4.184):0);
-    const P = p.nutriments['proteins_100g']||0;
-    const C = p.nutriments['carbohydrates_100g']||0;
-    const F = p.nutriments['fat_100g']||0;
-    const name = p.product_name || 'Unnamed food';
-    const per = p.quantity ? ('per '+p.quantity) : 'per 100g';
-    openModal(`
-      <h3>${esc(name)}</h3>
-      <div style="font-size:12.5px;color:var(--ink-3);margin-bottom:12px">${esc(p.brands||'')} · ${kcal} kcal per 100g</div>
-      <div class="field"><label>Servings (×100g)</label>
-        <input class="input" type="number" id="svAmount" value="1" min="0.1" step="0.1"></div>
-      <div style="font-size:13px;color:var(--ink-2);margin-top:8px">Serving unit: <b>${esc(per)}</b> — calories scale with your serving count.</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:10px 12px;background:rgba(10,132,255,0.08);border-radius:8px">
-        <span style="font-size:13px;font-weight:600;color:var(--ink-2)">Total</span>
-        <span style="font-size:16px;font-weight:700;color:var(--accent)" id="calTot">${Math.round(kcal)} kcal</span>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <button class="btn primary" onclick="addOnlineToDay('${meal}',${kcal},${P},${C},${F},'${esc(name).replace(/'/g,"\\'")}','${esc(per).replace(/'/g,"\\'")}',1)">Log it</button>
-        <button class="btn ghost" onclick="addOnlineToDayAndSave('${meal}',${kcal},${P},${C},${F},'${esc(name).replace(/'/g,"\\'")}','${esc(per).replace(/'/g,"\\'")}',1)">Log + Save to library</button>
-      </div>
-      <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancel</button></div>`);
-    const sv=document.getElementById('svAmount');
-    sv.addEventListener('input',()=>{
-      const n=parseFloat(sv.value)||1;
-      const tot=Math.round(kcal*n);
-      document.getElementById('calTot').textContent=tot+' kcal';
-    });
-  }).catch(()=>toast('Couldn’t load this item'));
-}
-function addOnlineToDay(meal, kcal, P, C, F, name, per){
-  const n=parseFloat(document.getElementById('svAmount')?.value)||1;
-  const d=dayEntry(currentDate);
-  d[meal].push({id:uid(), name:name, cal:Math.round(kcal*n), p:P*n, c:C*n, f:F*n, qty:(n>1?'×'+n+' ':per||'')});
-  save(); closeModal(); render(); toast('Logged '+name);
-}
-function addOnlineToDayAndSave(meal, kcal, P, C, F, name, per){
-  addOnlineToDay(meal, kcal, P, C, F, name, per);
-  // save to custom library if not present
-  if(!state.customFoods) state.customFoods=[];
-  if(!state.customFoods.some(x=>x.name===name)){
-    state.customFoods.push({id:'c'+uid(), name:name, cal:Math.round(kcal), p:P, c:C, f:F, cats:['Online'], per:per});
-    save(); toast(name+' saved to library');
-  }
-}
 function renderPickList(q, meal){
   const list=document.getElementById('pickList');
   if(!list) return;
-  if(pickMode==='online') return;
   const s=q.trim().toLowerCase();
   const items=allFoods().filter(f=>!s||f.name.toLowerCase().includes(s));
   list.innerHTML=items.length? items.map(f=>`
@@ -769,7 +707,7 @@ function renderPickList(q, meal){
       <div class="f-name">${esc(f.name)}</div>
       <div class="f-cals">${f.cal} kcal</div>
     </div>`).join('')
-  : `<div class="empty" style="padding:16px"><p>No match in library</p><small>Type a name and press “Save custom”, or switch to Search Online.</small></div>`;
+  : `<div class="empty" style="padding:16px"><p>Not in your library yet</p><small>Type the name and press “Save custom”, then edit its macros in the Library.</small></div>`;
 }
 function addLibraryFood(meal, fid){
   const f=allFoods().find(x=>x.id===fid);
@@ -831,45 +769,17 @@ function viewLibrary(){
     ${cells?`<div class="food-grid">${cells}</div>`:`<div class="empty">${SVG.empty}<p>No foods match “${esc(libraryQuery)}”</p><small>Add a new food below.</small></div>`}
 
     <div class="card" style="margin-top:22px">
-      <div class="card-hd"><h2>Search online database</h2><span class="sub">Open Food Facts · 3M+ global foods &amp; drinks</span></div>
-      <div class="searchbar">
-        <input class="input" id="libOnline" placeholder="Search any food or drink online… (coca cola, milo, nasi lemak)" onkeydown="if(event.key==='Enter')searchOnlineLib()">
-        <button class="btn primary" onclick="searchOnlineLib()">Search</button>
+      <div class="card-hd"><h2>Need a food that’s not here?</h2><span class="sub">Ask the assistant for its macros</span></div>
+      <div style="font-size:13.5px;color:var(--ink-2);line-height:1.6">
+        Just tell your assistant the food (or drink) and its serving, and it will give you the calories, protein, carbs and fat —
+        then click <b>New food</b> above to add it to your library, or paste the numbers into an existing entry.
       </div>
-      <div id="onlineResults"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn primary" onclick="openNewFood()">${SVG.plus} New food</button>
+      </div>
     </div>
     <footer>Designed &amp; Created by <b>Kevin Lim Fung Yen</b></footer>
   </div>`;
-}
-let libOnlineItems=[];
-function searchOnlineLib(){
-  const inp=document.getElementById('libOnline');
-  const box=document.getElementById('onlineResults');
-  if(!inp||!box) return;
-  const s=inp.value.trim();
-  if(!s){ box.innerHTML=`<div class="search-status">Type a food or drink to search.</div>`; return; }
-  box.innerHTML=`<div class="search-status">Searching “${esc(s)}”…</div>`;
-  fetchSearch(s).then(items=>{
-    libOnlineItems=items;
-    if(!libOnlineItems.length){ box.innerHTML=`<div class="search-status">No nutrition data found. Try another spelling.</div>`; return; }
-    box.innerHTML=libOnlineItems.map((f,i)=>`
-      <div class="food-row">
-        ${f.img?`<img class="online-thumb" src="${esc(f.img)}" alt="" onerror="this.style.display='none'">`:`<div class="online-nodata">?</div>`}
-        <div style="flex:1;min-width:0">
-          <div class="f-name">${esc(f.name)}${f.brand?`<span style="font-weight:500;color:var(--ink-3)"> · ${esc(f.brand)}</span>`:''}</div>
-          <div class="f-qty">${f.per100kcal!=null?f.per100kcal+' kcal':'n/a'} per 100g · P${Math.round(f.p)} C${Math.round(f.c)} F${Math.round(f.f)}</div>
-        </div>
-        <button class="chip-add" onclick="saveOnlineToLibrary(${i})">+ Save</button>
-      </div>`).join('');
-  }).catch(()=>{ box.innerHTML=`<div class="search-status">Couldn’t reach the database. <button class="chip-add" onclick="searchOnlineLib()">Retry</button></div>`; });
-}
-function saveOnlineToLibrary(i){
-  const f=libOnlineItems[i];
-  if(!f) return;
-  if(!state.customFoods) state.customFoods=[];
-  if(state.customFoods.some(x=>x.name===f.name)){ toast('Already in your library'); return; }
-  state.customFoods.push({id:'c'+uid(), name:f.name, cal:Math.round(f.per100kcal||0), p:f.p, c:f.c, f:f.f, cats:['Online'], per:'100g'});
-  save(); toast(f.name+' saved to library');
 }
 function quickAdd(fid, meal){
   currentDate=todayStr();
