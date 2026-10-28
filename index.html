@@ -192,6 +192,15 @@ input[type=number].input{-moz-appearance:textfield}
 }
 .chip-add:hover{background:rgba(10,132,255,0.06)}
 
+/* Segmented control (My Library / Search Online) */
+.seg{display:flex;background:rgba(0,0,0,0.06);border-radius:9px;padding:3px;gap:3px}
+.seg button{flex:1;padding:8px;border:none;background:transparent;border-radius:7px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:background .15s,color .15s}
+.seg button.active{background:var(--panel-solid);color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,0.12)}
+.seg button:hover:not(.active){background:rgba(0,0,0,0.03)}
+.online-thumb{width:38px;height:38px;border-radius:8px;object-fit:cover;flex:0 0 auto;background:rgba(0,0,0,0.05)}
+.online-nodata{width:38px;height:38px;border-radius:8px;background:rgba(0,0,0,0.06);flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-weight:700;font-size:13px}
+.search-status{font-size:12.5px;color:var(--ink-3);font-weight:500;padding:8px 4px}
+
 .searchbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
 .searchbar .input{flex:1;min-width:220px}
 
@@ -612,24 +621,133 @@ function jumpToday(){ currentDate=todayStr(); render(); }
 function addFoodToMeal(meal){
   openModal(`
     <h3>Add food to ${MEALS.find(m=>m.id===meal).label}</h3>
-    <div class="field"><label>Search library or type a name</label>
+    <div class="seg" style="margin-bottom:12px">
+      <button class="seg-btn active" data-mode="local" onclick="setPickMode('local','${meal}')">My Library</button>
+      <button class="seg-btn" data-mode="online" onclick="setPickMode('online','${meal}')">Search Online</button>
+    </div>
+    <div class="field" style="margin-bottom:10px"><label>Search</label>
       <input class="input" id="foodPick" placeholder="e.g. KFC, curry noodles, donut…" autofocus></div>
-    <div style="max-height:240px;overflow-y:auto;margin-top:10px" id="pickList"></div>
+    <div style="max-height:250px;overflow-y:auto;margin-top:4px" id="pickList"></div>
     <div class="modal-actions">
       <button class="btn ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn primary" onclick="saveCustomToMeal('${meal}')">Save custom</button>
+      <button class="btn primary" id="pickSaveBtn" onclick="saveCustomToMeal('${meal}')">Save custom</button>
     </div>`);
   const inp=document.getElementById('foodPick');
   renderPickList(inp.value, meal);
-  inp.addEventListener('input',()=>renderPickList(inp.value, meal));
+  inp.addEventListener('input',()=>{
+    const mode=document.querySelector('.seg-btn.active')?.dataset.mode;
+    if(mode==='online'){ clearTimeout(window.__pickDebounce); window.__pickDebounce=setTimeout(()=>searchOnline(inp.value, meal),400); }
+    else renderPickList(inp.value, meal);
+  });
 }
+let pickMode='local';
 function allFoods(){
   const custom=state.customFoods||[];
   return DEFAULT_FOODS.concat(custom);
 }
+function setPickMode(m, meal){
+  pickMode=m;
+  document.querySelectorAll('.seg-btn').forEach(b=>b.classList.toggle('active', b.dataset.mode===m));
+  const inp=document.getElementById('foodPick');
+  const list=document.getElementById('pickList');
+  const saveBtn=document.getElementById('pickSaveBtn');
+  inp.value='';
+  if(m==='online'){
+    inp.placeholder='e.g. coca cola, milo, nasi lemak, chicken…';
+    saveBtn.style.display='none';
+    list.innerHTML=`<div class="search-status">Type to search the global Open Food Facts database (foods &amp; drinks).</div>`;
+  } else {
+    inp.placeholder='e.g. KFC, curry noodles, donut…';
+    saveBtn.style.display='';
+    renderPickList('', meal);
+  }
+}
+function onlineRow(f){
+  const kcal = f.nutriments ? (f.nutriments['energy-kcal_100g']!=null?f.nutriments['energy-kcal_100g']:(f.nutriments['energy-kcal']!=null?f.nutriments['energy-kcal']:(f.nutriments['energy_100g']!=null?Math.round(f.nutriments['energy_100g']/4.184):null))):null;
+  const P = f.nutriments? (f.nutriments['proteins_100g']||0):0;
+  const C = f.nutriments? (f.nutriments['carbohydrates_100g']||0):0;
+  const F = f.nutriments? (f.nutriments['fat_100g']||0):0;
+  const img = f.image_url || f.image_front_url || '';
+  const brand = f.brands || '';
+  const name = f.product_name || 'Unnamed food';
+  return {
+    id:f.code, name:name, brand:brand, img:img, per100kcal:kcal, p:P, c:C, f:F, qty:'per 100g'
+  };
+}
+function searchOnline(q, meal){
+  const list=document.getElementById('pickList');
+  if(!list) return;
+  const s=q.trim();
+  if(!s){ list.innerHTML=`<div class="search-status">Type to search the global Open Food Facts database (foods &amp; drinks).</div>`; return; }
+  list.innerHTML=`<div class="search-status">Searching “${esc(s)}”…</div>`;
+  const url='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(s)+'&search_simple=1&action=process&json=1&page_size=15&fields=code,product_name,brands,image_url,image_front_url,nutriments';
+  fetch(url).then(r=>r.json()).then(data=>{
+    const items=(data&&data.products||[]).filter(p=>p.nutriments).map(onlineRow).slice(0,15);
+    if(!items.length){ list.innerHTML=`<div class="search-status">No nutrition data found for “${esc(s)}”. Try another spelling.</div>`; return; }
+    list.innerHTML=items.map((f,i)=>`
+      <div class="food-row" style="cursor:pointer" onclick="pickOnline('${meal}','${f.id}')">
+        ${f.img?`<img class="online-thumb" src="${esc(f.img)}" alt="" onerror="this.style.display='none'">`:`<div class="online-nodata">?</div>`}
+        <div style="flex:1;min-width:0">
+          <div class="f-name">${esc(f.name)}${f.brand?`<span style="font-weight:500;color:var(--ink-3)"> · ${esc(f.brand)}</span>`:''}</div>
+          <div class="f-qty">${f.per100kcal!=null?f.per100kcal+' kcal':'n/a'} per 100g · P${Math.round(f.p)} C${Math.round(f.c)} F${Math.round(f.f)}</div>
+        </div>
+        <div class="f-cals">＋</div>
+      </div>`).join('');
+  }).catch(()=>{ list.innerHTML=`<div class="search-status">Couldn’t reach the database. Check your internet and try again.</div>`; });
+}
+function pickOnline(meal, code){
+  // fetch full product to get proper serving (per product) info
+  fetch('https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json').then(r=>r.json()).then(data=>{
+    const p=data.product;
+    if(!p||!p.nutriments){ toast('No nutrition data for this item'); return; }
+    const kcal = p.nutriments['energy-kcal_100g']!=null?p.nutriments['energy-kcal_100g']:(p.nutriments['energy_100g']!=null?Math.round(p.nutriments['energy_100g']/4.184):0);
+    const P = p.nutriments['proteins_100g']||0;
+    const C = p.nutriments['carbohydrates_100g']||0;
+    const F = p.nutriments['fat_100g']||0;
+    const name = p.product_name || 'Unnamed food';
+    const per = p.quantity ? ('per '+p.quantity) : 'per 100g';
+    openModal(`
+      <h3>${esc(name)}</h3>
+      <div style="font-size:12.5px;color:var(--ink-3);margin-bottom:12px">${esc(p.brands||'')} · ${kcal} kcal per 100g</div>
+      <div class="field"><label>Servings (×100g)</label>
+        <input class="input" type="number" id="svAmount" value="1" min="0.1" step="0.1"></div>
+      <div style="font-size:13px;color:var(--ink-2);margin-top:8px">Serving unit: <b>${esc(per)}</b> — calories scale with your serving count.</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:10px 12px;background:rgba(10,132,255,0.08);border-radius:8px">
+        <span style="font-size:13px;font-weight:600;color:var(--ink-2)">Total</span>
+        <span style="font-size:16px;font-weight:700;color:var(--accent)" id="calTot">${Math.round(kcal)} kcal</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn primary" onclick="addOnlineToDay('${meal}',${kcal},${P},${C},${F},'${esc(name).replace(/'/g,"\\'")}','${esc(per).replace(/'/g,"\\'")}',1)">Log it</button>
+        <button class="btn ghost" onclick="addOnlineToDayAndSave('${meal}',${kcal},${P},${C},${F},'${esc(name).replace(/'/g,"\\'")}','${esc(per).replace(/'/g,"\\'")}',1)">Log + Save to library</button>
+      </div>
+      <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancel</button></div>`);
+    const sv=document.getElementById('svAmount');
+    sv.addEventListener('input',()=>{
+      const n=parseFloat(sv.value)||1;
+      const tot=Math.round(kcal*n);
+      document.getElementById('calTot').textContent=tot+' kcal';
+    });
+  }).catch(()=>toast('Couldn’t load this item'));
+}
+function addOnlineToDay(meal, kcal, P, C, F, name, per){
+  const n=parseFloat(document.getElementById('svAmount')?.value)||1;
+  const d=dayEntry(currentDate);
+  d[meal].push({id:uid(), name:name, cal:Math.round(kcal*n), p:P*n, c:C*n, f:F*n, qty:(n>1?'×'+n+' ':per||'')});
+  save(); closeModal(); render(); toast('Logged '+name);
+}
+function addOnlineToDayAndSave(meal, kcal, P, C, F, name, per){
+  addOnlineToDay(meal, kcal, P, C, F, name, per);
+  // save to custom library if not present
+  if(!state.customFoods) state.customFoods=[];
+  if(!state.customFoods.some(x=>x.name===name)){
+    state.customFoods.push({id:'c'+uid(), name:name, cal:Math.round(kcal), p:P, c:C, f:F, cats:['Online'], per:per});
+    save(); toast(name+' saved to library');
+  }
+}
 function renderPickList(q, meal){
   const list=document.getElementById('pickList');
   if(!list) return;
+  if(pickMode==='online') return;
   const s=q.trim().toLowerCase();
   const items=allFoods().filter(f=>!s||f.name.toLowerCase().includes(s));
   list.innerHTML=items.length? items.map(f=>`
@@ -637,7 +755,7 @@ function renderPickList(q, meal){
       <div class="f-name">${esc(f.name)}</div>
       <div class="f-cals">${f.cal} kcal</div>
     </div>`).join('')
-  : `<div class="empty" style="padding:16px"><p>No match in library</p><small>Type a name and press “Save custom”.</small></div>`;
+  : `<div class="empty" style="padding:16px"><p>No match in library</p><small>Type a name and press “Save custom”, or switch to Search Online.</small></div>`;
 }
 function addLibraryFood(meal, fid){
   const f=allFoods().find(x=>x.id===fid);
@@ -693,12 +811,52 @@ function viewLibrary(){
   <div class="shell">
     <div class="card-hd"><h2>Food library</h2><button class="btn primary" onclick="openNewFood()">${SVG.plus} New food</button></div>
     <div class="searchbar">
-      <input class="input" id="libSearch" placeholder="Search foods… (KFC, curry noodles, donut)" value="${esc(libraryQuery)}">
+      <input class="input" id="libSearch" placeholder="Search your library… (KFC, curry noodles, donut)" value="${esc(libraryQuery)}">
       <button class="btn ghost" onclick="document.getElementById('libSearch').value='';libraryQuery='';render()">Clear</button>
     </div>
     ${cells?`<div class="food-grid">${cells}</div>`:`<div class="empty">${SVG.empty}<p>No foods match “${esc(libraryQuery)}”</p><small>Add a new food below.</small></div>`}
+
+    <div class="card" style="margin-top:22px">
+      <div class="card-hd"><h2>Search online database</h2><span class="sub">Open Food Facts · 3M+ global foods &amp; drinks</span></div>
+      <div class="searchbar">
+        <input class="input" id="libOnline" placeholder="Search any food or drink online… (coca cola, milo, nasi lemak)" onkeydown="if(event.key==='Enter')searchOnlineLib()">
+        <button class="btn primary" onclick="searchOnlineLib()">Search</button>
+      </div>
+      <div id="onlineResults"></div>
+    </div>
     <footer>Designed &amp; Created by <b>Kevin Lim Fung Yen</b></footer>
   </div>`;
+}
+let libOnlineItems=[];
+function searchOnlineLib(){
+  const inp=document.getElementById('libOnline');
+  const box=document.getElementById('onlineResults');
+  if(!inp||!box) return;
+  const s=inp.value.trim();
+  if(!s){ box.innerHTML=`<div class="search-status">Type a food or drink to search.</div>`; return; }
+  box.innerHTML=`<div class="search-status">Searching “${esc(s)}”…</div>`;
+  const url='https://world.openfoodfacts.org/cgi/search.pl?search_terms='+encodeURIComponent(s)+'&search_simple=1&action=process&json=1&page_size=15&fields=code,product_name,brands,image_url,image_front_url,nutriments';
+  fetch(url).then(r=>r.json()).then(data=>{
+    libOnlineItems=(data&&data.products||[]).filter(p=>p.nutriments).map(onlineRow).slice(0,15);
+    if(!libOnlineItems.length){ box.innerHTML=`<div class="search-status">No nutrition data found. Try another spelling.</div>`; return; }
+    box.innerHTML=libOnlineItems.map((f,i)=>`
+      <div class="food-row">
+        ${f.img?`<img class="online-thumb" src="${esc(f.img)}" alt="" onerror="this.style.display='none'">`:`<div class="online-nodata">?</div>`}
+        <div style="flex:1;min-width:0">
+          <div class="f-name">${esc(f.name)}${f.brand?`<span style="font-weight:500;color:var(--ink-3)"> · ${esc(f.brand)}</span>`:''}</div>
+          <div class="f-qty">${f.per100kcal!=null?f.per100kcal+' kcal':'n/a'} per 100g · P${Math.round(f.p)} C${Math.round(f.c)} F${Math.round(f.f)}</div>
+        </div>
+        <button class="chip-add" onclick="saveOnlineToLibrary(${i})">+ Save</button>
+      </div>`).join('');
+  }).catch(()=>{ box.innerHTML=`<div class="search-status">Couldn’t reach the database. Check your internet and try again.</div>`; });
+}
+function saveOnlineToLibrary(i){
+  const f=libOnlineItems[i];
+  if(!f) return;
+  if(!state.customFoods) state.customFoods=[];
+  if(state.customFoods.some(x=>x.name===f.name)){ toast('Already in your library'); return; }
+  state.customFoods.push({id:'c'+uid(), name:f.name, cal:Math.round(f.per100kcal||0), p:f.p, c:f.c, f:f.f, cats:['Online'], per:'100g'});
+  save(); toast(f.name+' saved to library');
 }
 function quickAdd(fid, meal){
   currentDate=todayStr();
